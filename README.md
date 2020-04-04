@@ -41,6 +41,8 @@ Join the translation efforts on [Transifex](https://transifex.com/blockstream/es
 
 - For Liquid and other Elements-based chains: support for CT, peg-in/out transactions and multi-asset
 
+- Mainnet, Testnet and Elements high performance electrum server
+
 ## Developing
 
 To start a development server with live babel/browserify transpilation, run:
@@ -96,7 +98,10 @@ All options are optional.
 - `FOOT_HTML` - custom html to inject at the end of `<body>`
 - `CUSTOM_ASSETS` - space separated list of static assets to add to the build
 - `CUSTOM_CSS` - space separated list of css files to append into `style.css`
-- `NOSCRIPT_REDIR` - redirect noscript users to `{request_path}?nojs` (should be captured server-side and redirected to the prerender server, also see `PRERENDER_URL` in dev server options)
+- `NOSCRIPT_REDIR` - redirect noscript users to `{request_path}?nojs` (should be captured server-side and redirected to the prerender server, also see `NOSCRIPT_REDIR_BASE` in dev server options)
+
+Note that `API_URL` should be set to the publicly-reachable URL where the user's browser can issue requests at.
+(that is, *not* via `localhost`, unless you're setting up a dev environment where the browser is running on the same machine as the API server.)
 
 Elements-only configuration:
 
@@ -119,13 +124,17 @@ All GUI options, plus:
 
 - `PORT` - port to bind http development server (defaults to `5000`)
 - `CORS_ALLOW` - value to set for `Access-Control-Allow-Origin` header (optional)
-- `PRERENDER_URL` - base url for prerender server, for redirecting `?nojs` requests (should be set alongside `NOSCRIPT_REDIR`)
+- `NOSCRIPT_REDIR_BASE` - base url for prerender server, for redirecting `?nojs` requests (should be set alongside `NOSCRIPT_REDIR`)
 
 ### Pre-rendering server options
 
 All GUI options, plus:
 
 - `PORT` - port to bind pre-rendering server (defaults to `5001`)
+
+Note that unlike the regular JavaScript-based app that sends API requests from the client-side,
+the pre-rendering server sends API requests from the server-side. This means that `API_URL` should
+be configured to the URL reachable by the server, typically `http://localhost:3000/`.
 
 ## How to build the Docker image
 
@@ -136,7 +145,7 @@ docker build -t esplora .
 ## How to run the explorer for Bitcoin mainnet
 
 ```
-docker run -p 8080:80 \
+docker run -p 50001:50001 -p 8080:80 \
            --volume $PWD/data_bitcoin_mainnet:/data \
            --rm -i -t esplora \
            bash -c "/srv/explorer/run.sh bitcoin-mainnet explorer"
@@ -145,7 +154,7 @@ docker run -p 8080:80 \
 ## How to run the explorer for Liquid mainnet
 
 ```
-docker run -p 8082:80 \
+docker run -p 50001:50001 -p 8082:80 \
            --volume $PWD/data_liquid_mainnet:/data \
            --rm -i -t esplora \
            bash -c "/srv/explorer/run.sh liquid-mainnet explorer"
@@ -154,12 +163,40 @@ docker run -p 8082:80 \
 ## How to run the explorer for Bitcoin testnet3
 
 ```
-docker run -p 8084:80 \
+docker run -p 50001:50001 -p 8084:80 \
            --volume $PWD/data_bitcoin_testnet:/data \
            --rm -i -t esplora \
            bash -c "/srv/explorer/run.sh bitcoin-testnet explorer"
 ```
 
+## How to run the explorer for Liquid regtest
+
+```
+docker run -p 50001:50001 -p 8092:80 \
+           --volume $PWD/data_liquid_regtest:/data \
+           --rm -i -t esplora \
+           bash -c "/srv/explorer/run.sh bitcoin-liquid explorer"
+```
+
+## How to run the explorer for Bitcoin regtest
+
+```
+docker run -p 50001:50001 -p 8094:80 \
+           --volume $PWD/data_bitcoin_regtest:/data \
+           --rm -i -t esplora \
+           bash -c "/srv/explorer/run.sh bitcoin-regtest explorer"
+```
+
+## Docker config options
+
+Set `-e DEBUG=verbose` to enable more verbose logging.
+
+Set `-e NO_PRECACHE=1` to disable pre-caching of statistics for "popular addresses",
+which may take a long time and is not necessary for personal use.
+
+Set `-e NO_ADDRESS_SEARCH=1` to disable the [by-prefix address search](https://github.com/Blockstream/esplora/blob/master/API.md#get-address-prefixprefix) index.
+
+Set `-e ENABLE_LIGHTMODE=1` to enable [esplora-electrs's light mode](https://github.com/Blockstream/electrs/#light-mode).
 
 ## Build new esplora-base
 

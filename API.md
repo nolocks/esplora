@@ -18,16 +18,22 @@ Returns the transaction confirmation status.
 Available fields: `confirmed` (boolean), `block_height` (optional) and `block_hash` (optional).
 
 ### `GET /tx/:txid/hex`
+### `GET /tx/:txid/raw`
 
-Returns the raw transaction in hex.
+Returns the raw transaction in hex or as binary data.
+
+### `GET /tx/:txid/merkleblock-proof`
+
+Returns a merkle inclusion proof for the transaction using
+[bitcoind's merkleblock](https://bitcoin.org/en/glossary/merkle-block) format.
+
+*Note:* This endpoint is not currently available for Liquid/Elements-based chains.
 
 ### `GET /tx/:txid/merkle-proof`
 
-Returns a merkle inclusion proof for the transaction.
-
-Currently matches the merkle proof format used by Electrum's
-[`blockchain.transaction.get_merkle`](https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-transaction-get-merkle).
-*Will eventually be changed to use bitcoind's `merkleblock` format instead.*
+Returns a merkle inclusion proof for the transaction using
+[Electrum's `blockchain.transaction.get_merkle`](https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-transaction-get-merkle)
+format.
 
 ### `GET /tx/:txid/outspend/:vout`
 
@@ -89,6 +95,12 @@ Get the list of unspent transaction outputs associated with the address/scriptha
 Available fields: `txid`, `vout`, `value` and `status` (with the status of the funding tx).
 Elements-based chains have an additional `asset` field.
 
+### `GET /address-prefix/:prefix`
+
+Search for addresses beginning with `:prefix`.
+
+Returns a JSON array with up to 10 results.
+
 ## Blocks
 
 ### `GET /block/:hash`
@@ -124,6 +136,12 @@ The response from this endpoint can be cached indefinitely.
 ### `GET /block/:hash/txid/:index`
 
 Returns the transaction at index `:index` within the specified block.
+
+The response from this endpoint can be cached indefinitely.
+
+### `GET /block/:hash/raw`
+
+Returns the raw block representation in binary.
 
 The response from this endpoint can be cached indefinitely.
 
@@ -195,9 +213,9 @@ Each transaction object contains simplified overview data, with the following fi
 Get an object where the key is the confirmation target (in number of blocks)
 and the value is the estimated feerate (in sat/vB).
 
-The available confirmation targets are 2, 3, 4, 6, 10, 20, 144, 504 and 1008 blocks.
+The available confirmation targets are 1-25, 144, 504 and 1008 blocks.
 
-For example: `{ "2": 87.882, "3": 87.882, "4": 87.882, "6": 68.285, "10": 1.027, "20": 1.027, "144": 1.027, "504": 1.027, "1008": 1.027 }`
+For example: `{ "1": 87.882, "2": 87.882, "3": 87.882, "4": 87.882, "5": 81.129, "6": 68.285, ..., "144": 1.027, "504": 1.027, "1008": 1.027 }`
 
 ## Issued assets (Elements/Liquid only)
 
@@ -304,6 +322,7 @@ Does not include regular transactions transferring this asset.
 - `timestamp`
 - `bits`
 - `nonce`
+- `difficulty`
 - `merkle_root`
 - `tx_count`
 - `size`

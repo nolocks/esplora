@@ -1,10 +1,11 @@
-import 'babel-polyfill'
+import '@babel/polyfill'
 import { Observable as O } from './rxjs'
+import {setAdapt} from '@cycle/run/lib/adapt';
 
 import { getMempoolDepth, getConfEstimate, calcSegwitFeeGains } from './lib/fees'
 import getPrivacyAnalysis from './lib/privacy-analysis'
 import { blockTxsPerPage, blocksPerPage } from './const'
-import { dbg, combine, extractErrors, dropErrors, last, updateQuery, notNully, tryUnconfidentialAddress, parseHashes, isHash256 } from './util'
+import { dbg, combine, extractErrors, dropErrors, last, updateQuery, notNully, tryUnconfidentialAddress, parseHashes, isHash256, makeAddressQR } from './util'
 import l10n, { defaultLang } from './l10n'
 import * as views from './views'
 
@@ -13,14 +14,12 @@ if (process.browser) {
 }
 
 const apiBase = (process.env.API_URL || '/api').replace(/\/+$/, '')
-    , setBase = ({ path, ...r }) => ({ ...r, url: path.includes('://') ? path : apiBase + path })
+    , setBase = ({ path, ...r }) => ({ ...r, url: path.includes('://') || path.startsWith('./') ? path : apiBase + path })
 
-const reservedPaths = [ 'mempool', 'assets' ]
+const reservedPaths = [ 'mempool', 'assets', 'search' ]
 
-// Temporary bug workaround. Listening with on('form.search', 'submit') was unable
-// to catch some form submissions.
-const searchSubmit$ = !process.browser ? O.empty() : O.fromEvent(document.body, 'submit')
-  .filter(e => e.target.classList.contains('search'))
+// Make driver source observables rxjs5-compatible via rxjs-compat
+setAdapt(stream => O.from(stream))
 
 export default function main({ DOM, HTTP, route, storage, scanner: scan$, search: searchResult$ }) {
   const
@@ -43,9 +42,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
   , goRecent$ = route('/tx/recent')
   , goScan$   = route('/scan-qr').mapTo(true)
   , goMempool$= route('/mempool')
-  , goSearch$ = route('/:q([a-zA-Z0-9]+)').map(loc => loc.params.q === 'search' ? loc.query.q : loc.params.q)
-      .filter(q => !reservedPaths.includes(q))
-      .merge(scan$)
+  , goSearch$ = route('/search').map(loc => loc.query.q)
 
   , goAsset$  = !process.env.ISSUED_ASSETS ? O.empty() : route('/asset/:asset_id').map(loc => ({
       asset_id: loc.params.asset_id
@@ -54,6 +51,14 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     }))
 
   , goAssetList$ = !process.env.ISSUED_ASSETS || !process.env.ASSET_MAP_URL ? O.empty() : route('/assets')
+
+  // three ways to search: via the form, using the short /<query> search URL and using the QR scanner.
+  // this triggers a redirect to /search?q=<query>, which then triggers the search itself.
+  , searchQuery$ = O.merge(
+      on('.search', 'submit').map(e => e.target.querySelector('[name=q]').value)
+    , route('/:q([a-zA-Z0-9]+)').map(loc => loc.params.q).filter(q => !reservedPaths.includes(q))
+    , scan$
+    )
 
   // auto-expand when opening with "#expand"
   , expandTx$ = route('/tx/:txid').filter(loc => loc.query.expand).map(loc => loc.params.txid)
@@ -64,7 +69,6 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
   , togTheme$ = click('.toggle-theme')
 
   , copy$     = click('[data-clipboard-copy]').map(d => d.clipboardCopy)
-  , query$    = O.merge(searchSubmit$.map(e => e.target.querySelector('[name=q]').value), goSearch$)
   , pushtx$   = (process.browser
       ? on('form[data-do=pushtx]', 'submit', { preventDefault: true }).map(e => e.ownerTarget.querySelector('[name=tx]').value)
       : goPush$.filter(loc => loc.body && loc.body.tx).map(loc => loc.body.tx)
@@ -103,7 +107,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
   // Keep track of the number of active in-flight HTTP requests
   , loading$ = HTTP.select().filter(r$ => !r$.request.bg)
       .flatMap(r$ => r$.mapTo(-1).catch(_ => O.of(-1)).startWith(+1))
-      .merge(query$.mapTo(+1)).merge(searchResult$.mapTo(-1))
+      .merge(goSearch$.mapTo(+1)).merge(searchResult$.mapTo(-1))
       .startWith(0).scan((N, a) => N+a)
 
   // Recent blocks
@@ -136,6 +140,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
 
   // Address and associated txs
   , addr$ = reply('address').merge(goAddr$.mapTo(null))
+  , addrQR$ = addr$.flatMap(addr => addr ? makeAddressQR(addr.address) : [])
   , addrTxs$ = O.merge(
       reply('addr-txs').map(txs => S => txs)
     , reply('addr-txs-more').map(txs => S => [ ...S, ...txs ])
@@ -229,7 +234,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                      , goBlock$, block$, blockStatus$, blockTxs$, nextBlockTxs$, prevBlockTxs$, openBlock$
                      , mempool$, mempoolRecent$, feeEst$
                      , tx$, txAnalysis$, openTx$
-                     , goAddr$, addr$, addrTxs$
+                     , goAddr$, addr$, addrTxs$, addrQR$
                      , assetMap$, goAsset$, asset$, assetTxs$
                      , isReady$, loading$, page$, view$, title$, theme$
                      })
@@ -338,24 +343,24 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
 
   // Route navigation sink
   , navto$ = O.merge(
-      searchResult$.filter(Boolean).map(path => ({ type: 'push', pathname: path }))
+      searchResult$.filter(Boolean).map(result => ({ type: 'replace', ...result }))
     , byHeight$.map(hash => ({ type: 'replace', pathname: `/block/${hash}` }))
-    , updateQuery$.map(([ pathname, qs ]) => ({ type: 'replace', pathname: pathname+qs, state: { noRouting: true } }))
     , pushedtx$.map(txid => ({ type: 'push', pathname: `/tx/${txid}` }))
+    // XXX: replace still uses a single string with the search query (https://github.com/cyclejs/cyclejs/pull/890#issuecomment-542413707)
+    , updateQuery$.map(([ pathname, qs ]) => ({ type: 'replace', pathname: pathname+qs, state: { noRouting: true } }))
+    , searchQuery$.map(q => ({ type: 'push', pathname: '/search', search: `q=${encodeURIComponent(q)}` }))
   )
 
-  dbg({ goHome$, goBlock$, goTx$, togTx$, page$, lang$, vdom$
+  dbg({ goHome$, goBlock$, goTx$, togTx$, page$, lang$, vdom$, moreBlocks$
       , openTx$, openBlock$, updateQuery$
       , state$, view$, block$, blockTxs$, blocks$, tx$, txAnalysis$, spends$
       , tipHeight$, error$, loading$
-      , query$, searchResult$, copy$, store$, navto$, scanning$, scan$
+      , goSearch$, searchResult$, copy$, store$, navto$, scanning$, scan$
       , assetMap$
       , req$, reply$: dropErrors(HTTP.select()).map(r => [ r.request.category, r.req.method, r.req.url, r.body||r.text, r ]) })
 
   // @XXX side-effects outside of drivers
   if (process.browser) {
-
-    searchSubmit$.subscribe(e => e.preventDefault())
 
     // Click-to-copy
     if (navigator.clipboard) copy$.subscribe(text => navigator.clipboard.writeText(text))
@@ -394,5 +399,5 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     })
   }
 
-  return { DOM: vdom$, HTTP: req$, route: navto$, storage: store$, search: query$, scanner: scanning$, title: title$, state: state$ }
+  return { DOM: vdom$, HTTP: req$, route: navto$, storage: store$, search: goSearch$, scanner: scanning$, title: title$, state: state$ }
 }

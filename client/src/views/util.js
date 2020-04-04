@@ -3,11 +3,18 @@ import moveDec from 'move-decimal-point'
 import { sat2btc } from 'fmtbtc'
 import { nativeAssetLabel, isNativeOut } from '../util'
 
-const qruri = !process.env.NO_QR && require('qruri')
-
 const DEFAULT_PRECISION = 0
 
-export const formatTime = (unix, t) => new Date(unix*1000).toLocaleString(t.lang_id, { timeZoneName: 'short' })
+const pad = n => n < 10 ? '0'+n : n
+
+export const formatTime = unix => {
+  const time = new Date(unix*1000)
+      , tzOffset = time.getTimezoneOffset() * -1
+
+  return `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())}`
+       + ` ${pad(time.getHours())}:${pad(time.getMinutes())}:${pad(time.getSeconds())}`
+       + ` GMT${tzOffset == 0 ? '' : (tzOffset < 0 ? '' : '+') + (tzOffset/60)}`
+}
 
 export const formatSat = (sats, label=nativeAssetLabel) => `${formatNumber(sat2btc(sats))} ${label}`
 
@@ -20,7 +27,11 @@ export const formatOutAmount = (vout, { t, assetMap }, shortDisplay=false) => {
   if (vout.value == null) return t`Confidential`
 
   if (isNativeOut(vout)) {
-    return <span>{formatNumber(sat2btc(vout.value))} <a href={`asset/${vout.asset}`}>{nativeAssetLabel}</a></span>
+    return <span>
+      {formatNumber(sat2btc(vout.value))}
+      { ' ' }
+      {!vout.asset ? nativeAssetLabel : <a href={`asset/${vout.asset}`}>{nativeAssetLabel}</a>}
+    </span>
   }
 
   const [ domain, ticker, name, _precision ] = vout.asset && assetMap && assetMap[vout.asset] || []
@@ -74,8 +85,6 @@ export const linkToParentAddr = (addr, label=addr) =>
   <a href={parentChainExplorerAddr.replace('{addr}', addr)} target="_blank" rel="external">{label}</a>
 
 export const linkToAddr = addr => <a href={`address/${addr}`}>{addr}</a>
-
-export const addressQR = addr => qruri(`bitcoin:${addr}`, { margin: 2 })
 
 export const formatVMB = bytes =>
   bytes >= 10000 || bytes == 0 ? `${(bytes / 1000000).toFixed(2)} vMB`

@@ -105,7 +105,7 @@ variable "docker_tag_node_exporter" {
 
   # docker inspect --format='{{index .RepoDigests 0}}' prom/node-exporter:v0.16.0
 
-  default = "prom/node-exporter@sha256:55302581333c43d540db0e144cf9e7735423117a733cdec27716d87254221086"
+  default = "prom/node-exporter@sha256:b630fb29d99b3483c73a2a7db5fc01a967392a3d7ad754c8eccf9f4a67e7ee31"
 }
 
 variable "docker_tag_explorer" {
@@ -115,12 +115,12 @@ variable "docker_tag_explorer" {
 
 variable "docker_tag_tor" {
   type    = string
-  default = "blockstream/tor@sha256:f4d1373cde79fd79b467d2d6da88e37b0da137924bc10ae2d51a83c686c2c125"
+  default = "blockstream/tor@sha256:4f99eddb24fb779cc25b43ec0cc1a7a92341b4b9e3d1b02826d0e2ab67360c7f"
 }
 
 variable "docker_tag_prometheus" {
   type    = string
-  default = "gcr.io/green-address-explorer/prometheus@sha256:f3817443defecd22e51017769a8835dca21ea87f7d1edf6d78e007c90e813843"
+  default = "blockstream/prometheus@sha256:a4803e2732f6b4b47f425ef9bceeb7942865a4d5ceef4d8e3ee9c7db8363a3d3"
 }
 
 variable "min_ready_sec" {
