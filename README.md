@@ -105,12 +105,11 @@ Note that `API_URL` should be set to the publicly-reachable URL where the user's
 
 Elements-only configuration:
 
+- `IS_ELEMENTS` - set to `1` to indicate this is an Elements-based chain (enables asset issuance and peg features)
 - `NATIVE_ASSET_ID` - the ID of the native asset used to pay fees (defaults to `6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d`, the asset id for BTC)
 - `BLIND_PREFIX` - the base58 address prefix byte used for confidential addresses (defaults to `12`)
 - `PARENT_CHAIN_EXPLORER_TXOUT` - URL format for linking to transaction outputs on the parent chain, with `{txid}` and `{vout}` as placeholders. Example: `https://blockstream.info/tx/{txid}#output:{vout}`
 - `PARENT_CHAIN_EXPLORER_ADDRESS` - URL format for linking to addresses on parent chain, with `{addr}` replaced by the address. Example: `https://blockstream.info/address/{addr}`
-- `MANDATORY_SEGWIT` - set to `1` to indicate segwit is not an optional feature
-- `ASSET_ISSUANCE` - set to `1` to enable support for issued assets
 - `ASSET_MAP_URL` - url to load json asset map (in the "minimal" format)
 
 Menu configuration (useful for inter-linking multiple instances on different networks):
@@ -175,7 +174,7 @@ docker run -p 50001:50001 -p 8084:80 \
 docker run -p 50001:50001 -p 8092:80 \
            --volume $PWD/data_liquid_regtest:/data \
            --rm -i -t esplora \
-           bash -c "/srv/explorer/run.sh bitcoin-liquid explorer"
+           bash -c "/srv/explorer/run.sh liquid-regtest explorer"
 ```
 
 ## How to run the explorer for Bitcoin regtest
@@ -198,6 +197,8 @@ Set `-e NO_ADDRESS_SEARCH=1` to disable the [by-prefix address search](https://g
 
 Set `-e ENABLE_LIGHTMODE=1` to enable [esplora-electrs's light mode](https://github.com/Blockstream/electrs/#light-mode).
 
+Set `-e ONION_URL=http://xyz.onion` to enable the `Onion-Location` header.
+
 ## Build new esplora-base
 
 ```
@@ -206,20 +207,34 @@ docker push blockstream/esplora-base:latest
 docker inspect --format='{{index .RepoDigests 0}}' blockstream/esplora-base
 ```
 
-## Build new ci
+## Build new tor (or you can pull directly from Docker Hub - `blockstream/tor:latest`)
 
 ```
-docker build --squash -t blockstream/gcloud-docker:latest -f Dockerfile.ci .
-docker push blockstream/gcloud-docker:latest
-docker inspect --format='{{index .RepoDigests 0}}' blockstream/gcloud-docker
+docker build --squash -t blockstream/tor:latest -f Dockerfile.tor .
+docker push blockstream/tor:latest
+docker inspect --format='{{index .RepoDigests 0}}' blockstream/tor
 ```
+Run: `docker -d --name hidden_service blockstream/tor:latest tor -f /home/tor/torrc` (could add a `-v /extra/torrc:/home/tor/torrc`, if you have a custom torrc)
 
-# Build new gcloud-tor
-
+Example torrc:
 ```
-docker build --squash -t blockstream/gcloud-tor:latest -f Dockerfile.tor .
-docker push blockstream/gcloud-tor:latest
-docker inspect --format='{{index .RepoDigests 0}}' blockstream/gcloud-tor
+DataDirectory /home/tor/tor
+PidFile /var/run/tor/tor.pid
+
+ControlSocket /var/run/tor/control GroupWritable RelaxDirModeCheck
+ControlSocketsGroupWritable 1
+SocksPort unix:/var/run/tor/socks WorldWritable
+SocksPort 9050
+
+CookieAuthentication 1
+CookieAuthFileGroupReadable 1
+CookieAuthFile /var/run/tor/control.authcookie
+
+Log [handshake]debug [*]notice stderr
+
+HiddenServiceDir /home/tor/tor/hidden_service_v3/
+HiddenServiceVersion 3
+HiddenServicePort 80 127.0.0.1:80
 ```
 
 ## License

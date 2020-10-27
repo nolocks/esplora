@@ -41,6 +41,8 @@ a, a:link, a:visited, a:hover, a:focus {
   margin-bottom: 24px;
 }
 
+.table { color: inherit }
+
 .navbar {
   margin-bottom: -80px;
   /* background-color: rgba(17, 19, 22, 1); */
@@ -999,10 +1001,10 @@ body > .container, .navbar > .container, .jumbotron-fluid > .container, .content
   width: auto;
 }
 
-.vin.selected, .vout.selected {
+.vin.active, .vout.active {
   background: #3B4147 !important;
 }
-.theme-light .vin.selected, .theme-light .vout.selected {
+.theme-light .vin.active, .theme-light .vout.active {
   background: #FFFDD4 !important;
 }
 

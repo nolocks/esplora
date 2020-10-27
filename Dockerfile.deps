@@ -1,4 +1,4 @@
-FROM debian:buster@sha256:a63d0b2ecbd723da612abf0a8bdb594ee78f18f691d7dc652ac305a490c9b71a
+FROM debian:buster@sha256:46d659005ca1151087efa997f1039ae45a7bf7a2cbbe2d17d3dcbda632a3ee9a
 
 SHELL ["/bin/bash", "-c"]
 
@@ -10,33 +10,33 @@ RUN mkdir -p /srv/explorer \
 RUN git clone --quiet --depth 1 --single-branch --branch v0.33.11 https://github.com/creationix/nvm.git /root/.nvm \
  && rm -rf /root/.nvm/.git \
  && source /root/.nvm/nvm.sh \
- && nvm install v8.11.4
+ && nvm install v12.16.1
 
-ENV SHA256SUM_BITCOINCORE=5fcac9416e486d4960e1a946145566350ca670f9aaba99de6542080851122e4c
-RUN curl -sL -o bitcoin.tar.gz https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz \
+ENV SHA256SUM_BITCOINCORE=35ec10f87b6bc1e44fd9cd1157e5dfa483eaf14d7d9a9c274774539e7824c427
+RUN curl -sL -o bitcoin.tar.gz https://bitcoincore.org/bin/bitcoin-core-0.20.0/bitcoin-0.20.0-x86_64-linux-gnu.tar.gz \
  && echo "${SHA256SUM_BITCOINCORE}  bitcoin.tar.gz" | sha256sum --check \
  && tar xzf bitcoin.tar.gz -C /srv/explorer \
- && ln -s /srv/explorer/bitcoin-0.19.1 /srv/explorer/bitcoin \
+ && ln -s /srv/explorer/bitcoin-0.20.0 /srv/explorer/bitcoin \
  && rm bitcoin.tar.gz
 
-ENV SHA256SUM_ELEMENTS=50c273648ff650d7e2e5b0707953877f490aa3b5b4e82bdf06323d99ad881a73
-RUN curl -sL -o elements.tar.gz https://github.com/ElementsProject/elements/releases/download/elements-0.18.1.6/elements-0.18.1.6-x86_64-linux-gnu.tar.gz \
+ENV SHA256SUM_ELEMENTS=52f1993efdc52b1b9779040812bc622580c1240282e6cfc95a0d3333deaa2a2c
+RUN curl -sL -o elements.tar.gz https://github.com/ElementsProject/elements/releases/download/elements-0.18.1.9/elements-0.18.1.9-x86_64-linux-gnu.tar.gz \
  && echo "${SHA256SUM_ELEMENTS}  elements.tar.gz" | sha256sum --check \
  && tar xzf elements.tar.gz -C /srv/explorer \
- && ln -s /srv/explorer/elements-0.18.1.6 /srv/explorer/liquid \
+ && ln -s /srv/explorer/elements-0.18.1.9 /srv/explorer/liquid \
  && mv /srv/explorer/liquid/bin/{elementsd,liquidd} \
  && mv /srv/explorer/liquid/bin/{elements-cli,liquid-cli} \
  && rm elements.tar.gz
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.42.0 \
- && source /root/.cargo/env \
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.44.1
+RUN source /root/.cargo/env \
  && mkdir -p /srv/explorer/electrs{,_liquid} \
  && git clone --no-checkout https://github.com/blockstream/electrs.git \
  && cd electrs \
- && git checkout 1553c7bbd7768f74ff33c354f3403ebc0e2b47c2 \
+ && git checkout 2f8759e940a3fe56002d653c29a480ed3bffa416 \
  && cp contrib/popular-scripts.txt /srv/explorer \
- && cargo install --root /srv/explorer/electrs_bitcoin --path . \
- && cargo install --root /srv/explorer/electrs_liquid --path . --features "liquid" \
+ && cargo install --root /srv/explorer/electrs_bitcoin --locked --path . --features electrum-discovery \
+ && cargo install --root /srv/explorer/electrs_liquid --locked --path . --features electrum-discovery,liquid \
  && cd .. \
  && rm -fr /root/.cargo electrs \
  && strip /srv/explorer/electrs_*/bin/electrs

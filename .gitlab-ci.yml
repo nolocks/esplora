@@ -7,7 +7,7 @@ variables:
 services:
   - docker:19-dind
 
-image: blockstream/gcloud-docker@sha256:3f5037b4fa387ee44ab9c732cf6436b22b3f077f87ea62d61aaafc1e782350fc
+image: blockstream/gcloud-docker
 stages:
   - build
   - plan
@@ -96,11 +96,13 @@ plan:
     - (echo -n "$V3_PUBK" > terraform/modules/tor/v3.pubk)
     - (cd terraform && terraform init -input=false &&
        terraform workspace select main &&
+       terraform init -input=false &&
        terraform plan
         -var "prometheus_allowed_source_ip=$PROMETHEUS_ALLOWED_SOURCE_IP"
         -var "hosts=$HOSTS"
         -var "hosts_onion=$HOSTS_ONION"
         -var "cluster_size=$NODE_CLUSTER_SIZE"
+        -var "preemptible_cluster_size=$NODE_PREEMPTIBLE_CLUSTER_SIZE"
         -var "instance_type=$NODE_INSTANCE_TYPE"
         -var "preemptible_instance_type=$NODE_PREEMPTIBLE_INSTANCE_TYPE"
         -var "regions=$REGIONS"
@@ -121,11 +123,13 @@ plan_main:
     - (echo -n "$V3_PUBK" > terraform/modules/tor/v3.pubk)
     - (cd terraform && terraform init -input=false &&
        terraform workspace select main &&
+       terraform init -input=false &&
        terraform plan
         -var "prometheus_allowed_source_ip=$PROMETHEUS_ALLOWED_SOURCE_IP"
         -var "hosts=$HOSTS"
         -var "hosts_onion=$HOSTS_ONION"
         -var "cluster_size=$NODE_CLUSTER_SIZE"
+        -var "preemptible_cluster_size=$NODE_PREEMPTIBLE_CLUSTER_SIZE"
         -var "instance_type=$NODE_INSTANCE_TYPE"
         -var "preemptible_instance_type=$NODE_PREEMPTIBLE_INSTANCE_TYPE"
         -var "regions=$REGIONS"
@@ -147,11 +151,13 @@ deploy_main:
     - (echo -n "$V3_PUBK" > terraform/modules/tor/v3.pubk)
     - (cd terraform && terraform init -input=false &&
        terraform workspace select main &&
+       terraform init -input=false &&
        terraform apply
         -var "prometheus_allowed_source_ip=$PROMETHEUS_ALLOWED_SOURCE_IP"
         -var "hosts=$HOSTS"
         -var "hosts_onion=$HOSTS_ONION"
         -var "cluster_size=$NODE_CLUSTER_SIZE"
+        -var "preemptible_cluster_size=$NODE_PREEMPTIBLE_CLUSTER_SIZE"
         -var "instance_type=$NODE_INSTANCE_TYPE"
         -var "preemptible_instance_type=$NODE_PREEMPTIBLE_INSTANCE_TYPE"
         -var "regions=$REGIONS"
@@ -168,9 +174,11 @@ plan_bitcoin_mainnet:
   script:
     - (cd terraform && terraform init -input=false &&
        terraform workspace select bitcoin-mainnet &&
+       terraform init -input=false &&
        terraform plan
         -var "docker_tag_explorer=blockstream/esplora:$CI_COMMIT_SHA"
         -var "cluster_size=$NODE_CLUSTER_SIZE"
+        -var "preemptible_cluster_size=$NODE_PREEMPTIBLE_CLUSTER_SIZE"
         -var "instance_type=$NODE_INSTANCE_TYPE"
         -var "preemptible_instance_type=$NODE_PREEMPTIBLE_INSTANCE_TYPE"
         -var "regions=$REGIONS"
@@ -196,9 +204,11 @@ deploy_bitcoin_mainnet:
     - docker push blockstream/esplora:builder-bitcoin-mainnet
     - (cd terraform && terraform init -input=false &&
        terraform workspace select bitcoin-mainnet &&
+       terraform init -input=false &&
        terraform apply
         -var "docker_tag_explorer=blockstream/esplora:$CI_COMMIT_SHA"
         -var "cluster_size=$NODE_CLUSTER_SIZE"
+        -var "preemptible_cluster_size=$NODE_PREEMPTIBLE_CLUSTER_SIZE"
         -var "instance_type=$NODE_INSTANCE_TYPE"
         -var "preemptible_instance_type=$NODE_PREEMPTIBLE_INSTANCE_TYPE"
         -var "regions=$REGIONS"
@@ -217,9 +227,11 @@ plan_bitcoin_testnet:
   script:
     - (cd terraform && terraform init -input=false &&
        terraform workspace select bitcoin-testnet &&
+       terraform init -input=false &&
        terraform plan
         -var "docker_tag_explorer=blockstream/esplora:$CI_COMMIT_SHA"
         -var "cluster_size=$NODE_CLUSTER_SIZE"
+        -var "preemptible_cluster_size=$NODE_PREEMPTIBLE_CLUSTER_SIZE"
         -var "instance_type=$NODE_INSTANCE_TYPE"
         -var "preemptible_instance_type=$NODE_PREEMPTIBLE_INSTANCE_TYPE"
         -var "regions=$REGIONS"
@@ -245,9 +257,11 @@ deploy_bitcoin_testnet:
     - docker push blockstream/esplora:builder-bitcoin-testnet
     - (cd terraform && terraform init -input=false &&
        terraform workspace select bitcoin-testnet &&
+       terraform init -input=false &&
        terraform apply
         -var "docker_tag_explorer=blockstream/esplora:$CI_COMMIT_SHA"
         -var "cluster_size=$NODE_CLUSTER_SIZE"
+        -var "preemptible_cluster_size=$NODE_PREEMPTIBLE_CLUSTER_SIZE"
         -var "instance_type=$NODE_INSTANCE_TYPE"
         -var "preemptible_instance_type=$NODE_PREEMPTIBLE_INSTANCE_TYPE"
         -var "regions=$REGIONS"
@@ -266,9 +280,11 @@ plan_liquid_mainnet:
   script:
     - (cd terraform && terraform init -input=false &&
        terraform workspace select liquid-mainnet &&
+       terraform init -input=false &&
        terraform plan
         -var "docker_tag_explorer=blockstream/esplora:$CI_COMMIT_SHA"
         -var "cluster_size=$NODE_CLUSTER_SIZE"
+        -var "preemptible_cluster_size=$NODE_PREEMPTIBLE_CLUSTER_SIZE"
         -var "instance_type=$NODE_INSTANCE_TYPE"
         -var "preemptible_instance_type=$NODE_PREEMPTIBLE_INSTANCE_TYPE"
         -var "regions=$REGIONS"
@@ -294,9 +310,11 @@ deploy_liquid_mainnet:
     - docker push blockstream/esplora:builder-liquid-mainnet
     - (cd terraform && terraform init -input=false &&
        terraform workspace select liquid-mainnet &&
+       terraform init -input=false &&
        terraform apply
         -var "docker_tag_explorer=blockstream/esplora:$CI_COMMIT_SHA"
         -var "cluster_size=$NODE_CLUSTER_SIZE"
+        -var "preemptible_cluster_size=$NODE_PREEMPTIBLE_CLUSTER_SIZE"
         -var "instance_type=$NODE_INSTANCE_TYPE"
         -var "preemptible_instance_type=$NODE_PREEMPTIBLE_INSTANCE_TYPE"
         -var "regions=$REGIONS"

@@ -55,6 +55,11 @@ variable "cluster_size" {
   default = "overwritten_by_ci"
 }
 
+variable "preemptible_cluster_size" {
+  type    = string
+  default = "overwritten_by_ci"
+}
+
 # lists overwritten by ci
 variable "regions" {
   type    = list
@@ -106,6 +111,14 @@ variable "docker_tag_node_exporter" {
   # docker inspect --format='{{index .RepoDigests 0}}' prom/node-exporter:v0.16.0
 
   default = "prom/node-exporter@sha256:b630fb29d99b3483c73a2a7db5fc01a967392a3d7ad754c8eccf9f4a67e7ee31"
+}
+
+variable "docker_tag_process_exporter" {
+  type = string
+
+  # docker inspect --format='{{index .RepoDigests 0}}' ncabatoff/process-exporter:0.7.1
+
+  default = "ncabatoff/process-exporter@sha256:8daeaa3b5352dc64f5a3d438a1dad5f5c6ff8e468fcb7e50fb0c3f2e8f1b3bfd"
 }
 
 variable "docker_tag_explorer" {

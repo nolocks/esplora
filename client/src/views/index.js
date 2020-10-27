@@ -9,7 +9,8 @@ export { default as mempool } from './mempool'
 export { default as loading } from './loading'
 export { error, notFound }    from './error'
 
-if (process.env.ISSUED_ASSETS) {
+// Elements
+if (process.env.IS_ELEMENTS) {
   exports.asset = require('./asset').default
 
   if (process.env.ASSET_MAP_URL) {
